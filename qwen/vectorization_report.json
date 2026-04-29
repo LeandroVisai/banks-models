@@ -1,0 +1,14 @@
+{
+  "model": "D:\\GOEM\\Leandro\\Testing\\banks-qwen3-embedding\\models\\Qwen3-Embedding-0.6B",
+  "dimension": 1024,
+  "max_seq_length": 32768,
+  "total_chunks": 8365,
+  "truncated_count": 0,
+  "metadata_context_enabled": true,
+  "device_used": "cuda",
+  "token_stats": {
+    "min": 29,
+    "mean": 163,
+    "max": 5609
+  }
+}

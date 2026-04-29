@@ -1,0 +1,23 @@
+{
+  "pdf_count": 18,
+  "excel_count": 1,
+  "documents_processed": 19,
+  "documents_failed": [],
+  "documents_with_warnings": [],
+  "chunks_total": 8365,
+  "chunk_char_stats": {
+    "min": 46,
+    "p25": 386,
+    "p50_median": 468,
+    "p75": 555,
+    "p90": 642,
+    "max": 6381,
+    "mean": 486
+  },
+  "chunking_config": {
+    "target_chunk_chars": 600,
+    "min_chunk_chars": 200,
+    "max_chunk_chars": 1200,
+    "overlap_chars": 100
+  }
+}

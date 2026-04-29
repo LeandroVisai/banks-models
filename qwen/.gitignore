@@ -1,0 +1,19 @@
+# Artefactos generados — no versionar
+logs/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+
+# Modelos descargados (grandes, se re-descargan con SENTENCE_TRANSFORMERS_HOME)
+models_cache/
+
+# Variables de entorno locales
+.env
+.env.local
+
+# Archivos de Python
+*.egg-info/
+dist/
+build/

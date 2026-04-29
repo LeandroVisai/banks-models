@@ -1,0 +1,30 @@
+{
+  "pdf_count": 18,
+  "excel_count": 1,
+  "documents_processed": 19,
+  "documents_failed": [],
+  "documents_with_warnings": [
+    {
+      "document_id": "comentarios_monitor_monitor_pm_mm_textos_tarde",
+      "warnings": [
+        "missing_openpyxl: pip install openpyxl"
+      ]
+    }
+  ],
+  "chunks_total": 1875,
+  "chunk_char_stats": {
+    "min": 199,
+    "p25": 458,
+    "p50_median": 524,
+    "p75": 571,
+    "p90": 597,
+    "max": 6381,
+    "mean": 541
+  },
+  "chunking_config": {
+    "target_chunk_chars": 600,
+    "min_chunk_chars": 200,
+    "max_chunk_chars": 1200,
+    "overlap_chars": 100
+  }
+}

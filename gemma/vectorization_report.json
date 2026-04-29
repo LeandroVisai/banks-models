@@ -1,0 +1,14 @@
+{
+  "model": "D:\\GOEM\\Leandro\\Testing\\banks-EmbaddingGemma\\models\\EmbeddingGemma",
+  "dimension": 768,
+  "max_seq_length": 2048,
+  "total_chunks": 1875,
+  "truncated_count": 5,
+  "metadata_context_enabled": true,
+  "device_used": "cuda",
+  "token_stats": {
+    "min": 54,
+    "mean": 172,
+    "max": 5574
+  }
+}

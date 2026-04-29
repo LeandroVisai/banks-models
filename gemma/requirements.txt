@@ -1,0 +1,17 @@
+# Extracción PDF
+pypdf==4.0.1
+
+# NLP / embeddings
+sentence-transformers>=2.7.0
+torch>=2.0.1
+numpy>=1.24.3
+
+# PostgreSQL client
+psycopg2-binary>=2.9.6
+
+# Barra de progreso (usada por sentence-transformers)
+tqdm>=4.65.0
+
+# NOTA: la extensión pgvector NO es un paquete Python. Debe instalarse
+# en el servidor PostgreSQL. Ver SETUP_PGVECTOR.md para instrucciones
+# (Linux/Mac/Windows).

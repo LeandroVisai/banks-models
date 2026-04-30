@@ -3,20 +3,17 @@
 Orquestador del pipeline RAG.
 
 Uso:
-  python3 run.py                    # menú interactivo
-  python3 run.py full               # pipeline completo (0→1→2→3 setup+load)
-  python3 run.py step 0             # extracción + chunking
-  python3 run.py step 1             # enriquecimiento de metadata
-  python3 run.py step 2             # vectorización
-  python3 run.py step 3             # setup + load en PostgreSQL
-  python3 run.py step 3 setup       # solo crear schema
-  python3 run.py step 3 load        # solo cargar datos
-  python3 run.py step 3 reset       # DROP + recrear + cargar
-  python3 run.py step 3 stats       # métricas actuales
-  python3 run.py step 4 "<query>"   # búsqueda
-  python3 run.py search             # búsqueda interactiva
+  python3 run.py                           # menú interactivo
+  python3 run.py full                      # pipeline completo (0→1→2→3 setup+load)
+  python3 run.py step 0                    # extracción + chunking
+  python3 run.py step 1                    # enriquecimiento de metadata
+  python3 run.py step 2                    # vectorización
+  python3 run.py step 3 [setup|load|...]   # setup + load en PostgreSQL
+  python3 run.py step 4 "<query>" [k]      # búsqueda simple
+  python3 run.py search                    # búsqueda interactiva
+  python3 run.py advanced-search           # búsqueda con filtros avanzados
 
-El script delega a los .py numerados. No depende de shell/batch.
+El script delega a los .py numerados y 04_advanced_search.py. No depende de shell/batch.
 """
 from __future__ import annotations
 
@@ -80,6 +77,41 @@ def step_4_query(query: str, k: int = 5) -> int:
     return run(["04_search.py", query, str(k)], f"Paso 4 — Búsqueda: {query!r}")
 
 
+def step_4_advanced_search_interactive() -> int:
+    print("\nBúsqueda avanzada interactiva. Escribe 'salir' para terminar.")
+    print("Opción: --help para ver todos los filtros disponibles.\n")
+    while True:
+        try:
+            query = input("🔍 Consulta: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
+        if query.lower() in {"salir", "exit", "quit", ""}:
+            return 0
+        
+        # Mostrar filtros disponibles
+        print("\nFiltros (opcional, separados por espacio):")
+        print("  --year 2022          --month enero,febrero")
+        print("  --institution BANCO_CENTRAL_CHILE  --exclude-doc-types MONITOR_PM")
+        print("  --tags DECISION_POLITICA,VARIABLE_CRITICA")
+        print("  --min-importance 0.7  --exclude-boilerplate")
+        print("  --json  -k 10")
+        
+        filters_str = input("Filtros []: ").strip()
+        k = input("k [5]: ").strip() or "5"
+        
+        try:
+            int(k)
+        except ValueError:
+            print("(k inválido, usando 5)")
+            k = "5"
+        
+        args = [sys.executable, "04_advanced_search.py", query, "-k", k]
+        if filters_str:
+            args.extend(filters_str.split())
+        subprocess.run(args, cwd=HERE)
+
+
 def pipeline_full() -> int:
     stages = [("extracción", step_0), ("enriquecimiento", step_1),
               ("vectorización", step_2), ("postgres", step_3)]
@@ -103,6 +135,7 @@ def show_menu() -> int:
 ║  5. Paso 3 — Setup + Load PostgreSQL                                       ║
 ║  6. Paso 3 — Solo stats de la BD                                           ║
 ║  7. Paso 4 — Búsqueda interactiva                                          ║
+║  8. Paso 4 — Búsqueda AVANZADA (con filtros)                               ║
 ║  0. Salir                                                                  ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 """
@@ -123,6 +156,8 @@ def show_menu() -> int:
             step_3("stats")
         elif choice == "7":
             step_4_interactive()
+        elif choice == "8":
+            step_4_advanced_search_interactive()
         elif choice == "0":
             return 0
         else:
@@ -140,6 +175,9 @@ def main() -> int:
 
     if cmd == "search":
         return step_4_interactive()
+
+    if cmd == "advanced-search":
+        return step_4_advanced_search_interactive()
 
     if cmd == "step":
         if len(sys.argv) < 3:

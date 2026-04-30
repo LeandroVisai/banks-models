@@ -112,6 +112,31 @@ ECONOMIC_VARIABLES: dict[str, tuple[list[str], str]] = {
         "gas natural", "natural gas", "mineral",
     ], "HIGH"),
 
+    "POLITICA_FISCAL": ([
+        "politica fiscal", "fiscal policy",
+        "deficit fiscal", "superavit fiscal", "balance fiscal",
+        "balance estructural", "regla fiscal",
+        "gasto publico", "gasto fiscal", "government spending",
+        "gasto del gobierno", "presupuesto", "ley de presupuestos", "budget",
+        "ingresos fiscales", "recaudacion fiscal", "tax revenue",
+        "consolidacion fiscal", "ajuste fiscal", "estimulo fiscal", "fiscal stimulus",
+        "deuda publica", "public debt", "debt-to-gdp", "deuda como porcentaje",
+        "dipres", "tesoreria general",
+    ], "HIGH"),
+
+    "DEUDA_SOBERANA": ([
+        "deuda soberana", "sovereign debt",
+        "riesgo soberano", "riesgo pais", "country risk",
+        "cds", "credit default swap", "spread cds",
+        "calificacion soberana", "rating soberano", "sovereign rating",
+        "calificacion crediticia",
+        "moody's", "fitch ratings", "s&p global ratings",
+        "spread soberano", "sovereign spread",
+        "embi", "embi+", "embi global",
+        "downgrade soberano", "upgrade soberano",
+        "rebaja de clasificacion", "rebaja de calificacion",
+    ], "HIGH"),
+
     "CREDITO": ([
         "credito", "prestamos", "credit", "loans", "bank lending",
         "colocaciones", "credito bancario", "acceso al credito",
@@ -169,6 +194,32 @@ ECONOMIC_VARIABLES: dict[str, tuple[list[str], str]] = {
         "spread bonos bancarios", "spread bancario",
         "montos transados", "profundidad de mercado",
         "baja profundidad", "escasos montos", "volumen transado",
+    ], "MEDIUM"),
+
+    "MERCADO_INMOBILIARIO": ([
+        "mercado inmobiliario", "real estate", "housing market",
+        "precios de vivienda", "precio de vivienda", "housing prices", "house prices",
+        "credito hipotecario", "creditos hipotecarios",
+        "mortgage", "mortgage rate", "tasa hipotecaria",
+        "construccion", "sector construccion", "construction",
+        "edificacion", "permisos de edificacion",
+        "vivienda nueva", "vivienda usada",
+        "venta de viviendas", "ventas inmobiliarias",
+        "ihp", "indice de precios de vivienda",
+        "inmobiliario", "inmobiliaria",
+    ], "MEDIUM"),
+
+    "SECTOR_EXTERNO": ([
+        "sector externo", "external sector",
+        "balanza de pagos", "balance of payments",
+        "deuda externa", "external debt",
+        "inversion extranjera directa", "ied", "foreign direct investment", "fdi",
+        "remesas", "remittances",
+        "flujos de capital", "capital flows", "capital inflows", "capital outflows",
+        "salida de capitales", "entrada de capitales",
+        "reservas internacionales", "international reserves", "reservas del banco central",
+        "cuenta financiera", "financial account",
+        "posicion de inversion internacional",
     ], "MEDIUM"),
 }
 
@@ -272,10 +323,46 @@ ENTITY_KEYWORDS: dict[str, list[str]] = {
     ],
     "FEDERAL_RESERVE": [
         "federal reserve", "the fed", "fomc", "fed funds",
-        "jerome powell",
+        "jerome powell", "powell",
     ],
-    "ECB": ["european central bank", "ecb", "banco central europeo"],
+    "ECB": ["european central bank", "ecb", "banco central europeo", "bce"],
     "IMF": ["imf", "fmi", "fondo monetario internacional"],
+    "BANCO_CHINA": [
+        "peoples bank of china", "pboc", "banco popular de china",
+        "banco central de china",
+    ],
+    "BANCO_JAPON": [
+        "bank of japan", "boj", "banco de japon",
+        "banco central de japon", "banca de japon",
+    ],
+    "BANCO_INGLATERRA": [
+        "bank of england", "boe", "banco de inglaterra",
+    ],
+    "OCDE": [
+        "ocde", "oecd",
+        "organizacion para la cooperacion y el desarrollo economicos",
+        "paises ocde", "miembros ocde",
+    ],
+    "BIS": [
+        "bank for international settlements",
+        "banco de pagos internacionales", "bpi",
+        "bis working paper", "bis quarterly",
+    ],
+    "PERSONA_LAGARDE": [
+        "lagarde", "christine lagarde",
+    ],
+    "PERSONA_BCCH": [
+        "rosanna costa", "mario marcel", "alberto naudon",
+        "pablo garcia silva", "stephany griffith-jones",
+        "presidente del banco central", "presidenta del banco central",
+    ],
+    "DOCUMENTO_CLAVE_BCCH": [
+        "ipom", "informe de politica monetaria",
+        "ief", "informe de estabilidad financiera",
+        "fcic", "facilidad de credito en condiciones inusuales",
+        "ifo", "informe financiero",
+        "informe de percepciones de negocios",
+    ],
     "PAIS_CHILE": [
         "chile", "chilena", "chileno",
         "clp",             # código ISO del peso chileno
@@ -288,6 +375,13 @@ ENTITY_KEYWORDS: dict[str, list[str]] = {
     "PAIS_US": ["estados unidos", "united states", "eeuu", "ee.uu.", "dxy"],
     "PAIS_EUROZONE": ["eurozona", "euro area", "zona euro"],
     "PAIS_CHINA": ["china", "chinese", "beijing"],
+    "PAIS_JAPON": ["japon", "japan", "japanese"],
+    "PAIS_UK": ["reino unido", "united kingdom", "uk", "great britain", "britain"],
+    "PAIS_BRASIL": ["brasil", "brazil", "brazilian", "bcb", "banco central do brasil"],
+    "PAIS_LATAM": [
+        "america latina", "latin america", "latam",
+        "colombia", "peru", "mexico", "argentina", "brasil",
+    ],
 }
 
 
@@ -320,20 +414,57 @@ FORWARD_LOOKING_KEYWORDS = [
 
 FORWARD_LOOKING_PATTERN = compile_word_pattern(FORWARD_LOOKING_KEYWORDS)
 
-# Texto boilerplate legal/disclaimer (típico de reportes JPMorgan y similares).
+# Texto boilerplate legal/disclaimer/copyright (típico de reportes, PDFs, etc).
 # Los chunks que matcheen esto son ruido y deben recibir penalización máxima.
+#
+# Categorías:
+#   - Disclosure de riesgos y legales (JPMorgan, Reuters, etc.)
+#   - Copyright, derechos de autor, all rights reserved
+#   - Aviso de confidencialidad
+#   - Certificación de analista
+#   - Advertencia de prospectiva (forward-looking statements)
+#   - Contacto/pie de página repetitivo
 BOILERPLATE_KEYWORDS = [
+    # Disclosure legal / JP Morgan
     "legal entity responsible for the production",
     "this document is being provided for the exclusive use",
     "legal entities disclosures",
     "analyst certification",
     "reg ac research analyst",
+    "disclaimer", "legal disclaimer", "important disclosures","disclaims","legal-disclaimers"
     "country-/region-specific disclosures",
     "regulatory disclosures",
     "not regulated activities in your jurisdiction",
     "j.p. morgan securities",
     "jpmorgan chase bank",
     "securities and exchange board",
+    # Copyright
+    "copyright", "all rights reserved", "derechos reservados",
+    "propietario del contenido", "copyright notice",
+    # Confidencialidad
+    "this message is confidential", "mensaje confidencial",
+    "intended recipient", "destinatario autorizado",
+    "if you have received this message in error",
+    "si ha recibido este mensaje por error",
+    # Forward-looking legal disclaimer (a veces en pie de página)
+    "forward-looking statements", "declaraciones prospectivas",
+    "may contain forward-looking information",
+    "past performance is not indicative",
+    "rendimiento pasado no es indicativo",
+    # Pie de página / contacto estándar
+    "for further information please contact",
+    "para mas informacion contacte",
+    "phone", "email", "extension",
+    "telefono", "correo electronico", "extension",
+    # Watermark / propiedad intelectual
+    "proprietary information", "informacion propietaria",
+    "confidential treatment requested", "tratamiento confidencial solicitado",
+    "not for distribution", "no para distribucion",
+    # Aviso de descargo (típico de research)
+    "this publication is distributed",
+    "esta publicacion se distribuye",
+    "disclaimer", "descargo de responsabilidad",
+    "important disclosure", "divulgacion importante",
 ]
 BOILERPLATE_PATTERN = compile_word_pattern(BOILERPLATE_KEYWORDS)
 

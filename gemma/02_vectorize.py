@@ -37,6 +37,8 @@ import json
 import os
 import sys
 from pathlib import Path
+from sentence_transformers import SentenceTransformer
+import numpy
 
 INPUT_CHUNKS = Path("logs/chunks_enriched.json")
 OUTPUT_CHUNKS = Path("logs/chunks_vectorized.json")
@@ -51,6 +53,10 @@ if _LOCAL_MODEL_PATH.exists():
     DEFAULT_MODEL = str(_LOCAL_MODEL_PATH)
 else:
     DEFAULT_MODEL = _DEFAULT_MODEL_ID
+
+
+DEFAULT_MODEL = r"D:\Leandro\banks-EmbaddingGemma\models\EmbeddingGemma"
+
 
 FALLBACK_MODEL = "intfloat/multilingual-e5-small"
 BATCH_SIZE = 32
@@ -87,8 +93,6 @@ def build_embed_text(chunk: dict, model_name: str) -> str:
 
 
 def load_model(name: str):
-    from sentence_transformers import SentenceTransformer
-
     print(f"[02] Cargando modelo: {name}")
     return SentenceTransformer(name)
 
@@ -99,18 +103,7 @@ def main() -> int:
               file=sys.stderr)
         return 1
 
-    try:
-        import numpy as np
-    except ImportError:
-        print("❌ Falta numpy. pip install numpy", file=sys.stderr)
-        return 1
 
-    try:
-        from sentence_transformers import SentenceTransformer  # noqa: F401
-    except ImportError:
-        print("❌ Falta sentence-transformers. pip install sentence-transformers torch",
-              file=sys.stderr)
-        return 1
 
     with open(INPUT_CHUNKS, "r", encoding="utf-8") as f:
         chunks = json.load(f)

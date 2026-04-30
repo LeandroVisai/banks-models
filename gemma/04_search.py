@@ -22,6 +22,7 @@ import json
 import os
 import re
 import sys
+from datetime import date
 from pathlib import Path
 
 import numpy as np
@@ -44,7 +45,7 @@ from taxonomy import (
 # ---------------------------------------------------------------------------
 
 DB_NAME = os.getenv("PGDATABASE", "rag_banco")
-TABLE_PREFIX = os.getenv("RAG_TABLE_PREFIX", "")
+TABLE_PREFIX = os.getenv("RAG_TABLE_PREFIX", "gemma_")
 
 
 def _table_name(base: str) -> str:
@@ -90,6 +91,11 @@ MONTH_RE = re.compile(
     r"\b(" + "|".join(sorted(MONTH_NAMES, key=len, reverse=True)) + r")\b"
 )
 
+DATE_TEXT_RE = re.compile(
+    r"\b(\d{1,2})\s*(?:de\s+)?(" + "|".join(sorted(MONTH_NAMES, key=len, reverse=True)) + r")\s*(?:de\s+)?((?:19|20)?\d{2})\b"
+)
+DATE_NUM_RE = re.compile(r"\b(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b")
+
 FILENAME_DATE_RE = re.compile(
     r"(?:^|[^0-9])(?:(\d{4})[._/-](\d{2})[._/-](\d{2})|(\d{2})[._/-](\d{2})[._/-](\d{2}))(?:[^0-9]|$)"
 )
@@ -120,6 +126,34 @@ def parse_query(query: str) -> dict:
     norm = normalize_text(query)
     clean = query
 
+    # Fecha exacta (día-mes-año)
+    exact_date = None
+    m = DATE_TEXT_RE.search(norm)
+    if m:
+        day = int(m.group(1))
+        month = MONTH_NAMES[m.group(2)]
+        year = int(m.group(3))
+        if year < 100:
+            year += 2000
+        try:
+            exact_date = date(year, month, day)
+            clean = DATE_TEXT_RE.sub("", clean, count=1)
+        except ValueError:
+            exact_date = None
+    else:
+        m = DATE_NUM_RE.search(norm)
+        if m:
+            day = int(m.group(1))
+            month = int(m.group(2))
+            year = int(m.group(3))
+            if year < 100:
+                year += 2000
+            try:
+                exact_date = date(year, month, day)
+                clean = DATE_NUM_RE.sub("", clean, count=1)
+            except ValueError:
+                exact_date = None
+
     # Año o rango
     year_from = year_to = None
     m = YEAR_RANGE_RE.search(norm)
@@ -137,10 +171,13 @@ def parse_query(query: str) -> dict:
 
     # Mes
     month = None
-    mm = MONTH_RE.search(norm)
-    if mm:
-        month = MONTH_NAMES[mm.group(1)]
-        clean = MONTH_RE.sub("", clean)
+    if exact_date is None:
+        mm = MONTH_RE.search(norm)
+        if mm:
+            month = MONTH_NAMES[mm.group(1)]
+            clean = MONTH_RE.sub("", clean)
+    else:
+        month = exact_date.month
 
     # Tipos de documento
     doc_types: list[str] = []
@@ -153,10 +190,29 @@ def parse_query(query: str) -> dict:
 
     # Secciones
     sections = [s for s, pat in SECTION_PATTERNS.items() if pat.search(norm)]
+    # Evita falsos positivos: frases genéricas como "en chile" no deberían
+    # forzar sección CONTEXTO_INTERNO si la intención no es explícitamente
+    # pedir contexto interno.
+    if "CONTEXTO_INTERNO" in sections:
+        explicit_internal = any(
+            kw in norm
+            for kw in (
+                "contexto interno",
+                "escenario interno",
+                "economia nacional",
+                "actividad local",
+                "actividad economica local",
+                "indicadores locales",
+                "domestic economy",
+            )
+        )
+        if not explicit_internal:
+            sections = [s for s in sections if s != "CONTEXTO_INTERNO"]
 
     return {
         "raw_query": query,
         "clean_query": re.sub(r"\s+", " ", clean).strip() or query,
+        "exact_date": exact_date.isoformat() if exact_date else None,
         "year_from": year_from,
         "year_to": year_to,
         "month": month,
@@ -214,6 +270,11 @@ def get_db_embedding_dim(conn) -> int | None:
 def build_filters_sql(parsed: dict) -> tuple[str, list]:
     clauses: list[str] = []
     params: list = []
+
+    exact_date = parsed.get("exact_date")
+    if exact_date:
+        clauses.append("(c.chunk_date = %s::date OR d.document_date = %s)")
+        params.extend([exact_date, exact_date])
 
     if parsed["doc_types"]:
         clauses.append("d.doc_type_category = ANY(%s)")
@@ -279,6 +340,20 @@ def _row_matches_month(row: dict, month: int | None) -> bool:
     if month is None:
         return True
     return _extract_month_from_row(row) == month
+
+
+def _row_matches_exact_date(row: dict, exact_date: str | None) -> bool:
+    if exact_date is None:
+        return True
+    chunk_date = row.get("chunk_date")
+    if chunk_date is not None:
+        if hasattr(chunk_date, "isoformat"):
+            return chunk_date.isoformat() == exact_date
+        return str(chunk_date) == exact_date
+    document_date = row.get("document_date")
+    if isinstance(document_date, str):
+        return document_date == exact_date
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -372,6 +447,8 @@ def date_importance_fallback(conn, parsed: dict, n: int) -> list[dict]:
         cur.execute(sql, params + [n])
         rows = cur.fetchall()
 
+    if parsed.get("exact_date") is not None:
+        rows = [row for row in rows if _row_matches_exact_date(row, parsed["exact_date"])]
     if parsed.get("month") is not None:
         rows = [row for row in rows if _row_matches_month(row, parsed["month"])]
     return rows
@@ -547,6 +624,9 @@ def search(query: str, k: int = 5, use_mmr: bool = True) -> list[dict]:
     if parsed.get("month") is not None:
         fused = [hit for hit in fused if _row_matches_month(hit, parsed["month"])]
 
+    if parsed.get("exact_date") is not None:
+        fused = [hit for hit in fused if _row_matches_exact_date(hit, parsed["exact_date"])]
+
     if not fused:
         with connect() as conn:
             fused = date_importance_fallback(conn, parsed, n=max(k * 4, 20))
@@ -579,6 +659,8 @@ def format_text_output(results: list[dict], parsed: dict) -> str:
     if parsed.get("month") is not None:
         month_names_inv = {v: k for k, v in MONTH_NAMES.items() if len(k) > 3}
         filters.append(f"mes={month_names_inv.get(parsed['month'], parsed['month'])}")
+    if parsed.get("exact_date") is not None:
+        filters.append(f"fecha={parsed['exact_date']}")
     if parsed["doc_types"]:
         filters.append(f"doc={','.join(parsed['doc_types'])}")
     if parsed["variables"]:
@@ -617,7 +699,12 @@ def format_text_output(results: list[dict], parsed: dict) -> str:
         lines.append(f"    datos: {nums_str}")
         lines.append(f"    tags: {tags_str}")
         text = r["text"].replace("\n", " ")
-        lines.append(f"    > {text[:400]}" + ("…" if len(text) > 400 else ""))
+        # Para Excel, mostrar completo; para PDFs, limitar a 400 chars
+        filename = r.get("filename", "").lower()
+        is_excel = filename.endswith(".xlsx") or filename.endswith(".xls")
+        max_display = float('inf') if is_excel else 400
+        display_text = text if is_excel else text[:400]
+        lines.append(f"    > {display_text}" + ("…" if len(text) > max_display else ""))
 
     return "\n".join(lines)
 

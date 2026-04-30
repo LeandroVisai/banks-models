@@ -32,6 +32,7 @@ Uso:
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from dataclasses import asdict
@@ -58,9 +59,10 @@ from taxonomy import (
 # Configuración
 # ---------------------------------------------------------------------------
 
-INPUT_CHUNKS = Path("logs/chunks.json")
-INPUT_DOCUMENTS = Path("logs/documents.json")
-OUTPUT_CHUNKS = Path("logs/chunks_enriched.json")
+_LOGS_DIR = Path(os.environ.get("RAG_LOGS_DIR", "logs"))
+INPUT_CHUNKS = _LOGS_DIR / "chunks.json"
+INPUT_DOCUMENTS = _LOGS_DIR / "documents.json"
+OUTPUT_CHUNKS = _LOGS_DIR / "chunks_enriched.json"
 
 # Pesos del importance_score. La suma puede exceder 1.0; el resultado se
 # capa a 1.0. La calibración objetivo (tras validar sobre los PDFs de prueba):
